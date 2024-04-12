@@ -1,78 +1,119 @@
 package com.example.bingo;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import java.util.ArrayList;
 import java.util.Collections;
-import android.graphics.Color;
-import android.view.View;
-
-import java.util.List;
 import java.util.Random;
-import android.widget.ImageView;
-import android.widget.Toast;
-
-import android.graphics.Picture;
+import android.os.CountDownTimer;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import java.util.HashSet;
+
 
 public class MainActivity extends Activity {
 
-    //private DatabaseHelper databaseHelper;
-    //private SQLiteDatabase database;
 
-    private final String[] allTexts = {
-            "Tekst 1", "Tekst 2", "Tekst 3", "Tekst 4",
-            "Tekst 5", "Tekst 6", "Tekst 7", "Tekst 8",
-            "Tekst 9", "Tekst 10", "Tekst 11", "Tekst 12",
-            "Tekst 13", "Tekst 14", "Tekst 15", "Tekst 16",
-            "Tekst 17", "Tekst 18", "Tekst 19", "Tekst 20",
-    };
     private final int[] buttonIds = {
             R.id.button1, R.id.button2, R.id.button3, R.id.button4,
             R.id.button5, R.id.button6, R.id.button7, R.id.button8,
             R.id.button9, R.id.button10, R.id.button11, R.id.button12,
-            R.id.button13, R.id.button14, R.id.button15, R.id.button16
+            R.id.button13, R.id.button14, R.id.button15, R.id.button16,
+            R.id.button17, R.id.button18, R.id.button19, R.id.button20,
+            R.id.button21, R.id.button22, R.id.button23, R.id.button24,
+            R.id.button25
     };
 
-
+    private ProgressBar progressBar;
+    private TextView toolbarTitle;
+    private CountDownTimer countDownTimer;
+    private Random random;
+    private int selectedNumber;
+    private ArrayList<Integer> availableNumbers;
+    private boolean gameActive = true;
     private ImageView bingoImage;
     private Button replayButton;
-    private ArrayList<String> availableTexts;
-    private boolean gameActive = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        availableTexts = new ArrayList<>();
-        Collections.addAll(availableTexts, allTexts);
-
         bingoImage = findViewById(R.id.bingoImage);
         replayButton = findViewById(R.id.replayButton);
+
+        replayButton.setOnClickListener(replayButtonClickListener);
 
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
 
-        replayButton.setOnClickListener(replayButtonClickListener);
+        progressBar = findViewById(R.id.progress_bar);
+        toolbarTitle = findViewById(R.id.toolbar_title);
 
-
-        Random random=new Random();
-
+        random = new Random();
         initializeButtons(random);
+        generateRandomNumber(); // Losujemy pierwszą liczbę na początku
+
+        startTimer();
     }
 
-    private void initializeButtons(Random random){
-        // Przetasuj dostępne teksty
-        Collections.shuffle(availableTexts,random);
+    private void startTimer() {
+        countDownTimer = new CountDownTimer(5000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                long seconds = millisUntilFinished / 1000;
+                progressBar.setProgress((int) millisUntilFinished);
+                toolbarTitle.setText("Time left: " + seconds + "s");
+
+                // Jeśli to pierwsza sekunda, generuj nową liczbę i wyświetl ją w toolbarze
+                if (seconds == 6) {
+                    generateRandomNumber();
+                    toolbarTitle.setText(toolbarTitle.getText() + " - Selected Number: " + selectedNumber);
+                }
+            }
+
+            @Override
+            public void onFinish() {
+                progressBar.setVisibility(ProgressBar.GONE);
+                toolbarTitle.setText("Time's up!");
+                gameActive = false;
+                displayBingo();
+                progressBar.postDelayed(() -> {
+                    progressBar.setVisibility(ProgressBar.VISIBLE);
+                    startTimer();
+                    gameActive = true;
+                }, 3000);
+            }
+        }.start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+    }
+
+    private void initializeButtons(){
+        availableNumbers = new HashSet<>();
+        for (int i = 1; i <= 50; i++) {
+            availableNumbers.add(i);
+        }
+
+        ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
+        Collections.shuffle(randomNumbers, random);
 
         // Przypisz unikalne teksty do przycisków
         for (int i = 0; i <buttonIds.length; i++) {
-            String buttonText = availableTexts.get(i);
-            final Button button = findViewById(buttonIds[i]);
-            button.setText(buttonText);
+            final Button button=findViewById(buttonIds[i]);
+            button.setText(String.valueOf(randomNumbers.get(i)));
+
             int kolor = Color.GRAY;
             button.setBackgroundColor(kolor);
             // Dodaj Listener do przycisku
@@ -96,44 +137,25 @@ public class MainActivity extends Activity {
 
     // Funkcja do resetowania przycisków
     private void resetButtons() {
-        Random random=new Random();
-        availableTexts.clear();
-
-        Collections.addAll(availableTexts, allTexts);
-
-        // Przetasuj dostępne teksty
-        Collections.shuffle(availableTexts,random);
-
-        // Przypisz unikalne teksty do przycisków
-        for (int i = 0; i <buttonIds.length; i++) {
-            String buttonText = availableTexts.get(i);
-            final Button button = findViewById(buttonIds[i]);
-            button.setText(buttonText);
-            int kolor = Color.GRAY;
-            button.setBackgroundColor(kolor);
-            button.setTag(0);
-            // Dodaj Listener do przycisku
-            button.setVisibility(View.VISIBLE);
-
-        }
+        initializeButtons();
     }
 
     private final View.OnClickListener replayButtonClickListener = v -> {
         // Przywróć przyciski do stanu początkowego
 
 
-            gameActive = true;
+        gameActive = true;
 
-            for (int buttonId : buttonIds) {
-                Button button = findViewById(buttonId);
-                button.setVisibility(View.VISIBLE);
-            }
+        for (int buttonId : buttonIds) {
+            Button button = findViewById(buttonId);
+            button.setVisibility(View.VISIBLE);
+        }
 
-            // Ukryj obrazek i przycisk Replay
-            bingoImage.setVisibility(View.GONE);
-            replayButton.setVisibility(View.GONE);
+        // Ukryj obrazek i przycisk Replay
+        bingoImage.setVisibility(View.GONE);
+        replayButton.setVisibility(View.GONE);
 
-            resetButtons();
+        resetButtons();
 
 
     };
@@ -164,13 +186,23 @@ public class MainActivity extends Activity {
 
         }
     };
+
+
+    private void generateRandomNumber() {
+        ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
+        Collections.shuffle(numbersList, random);
+        selectedNumber = numbersList.get(0);
+        availableNumbers.remove(selectedNumber);
+    }
+
+
     @SuppressLint("UseCompatLoadingForDrawables")
     private boolean checkBingo() {
         // Check for horizontal BINGO
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             boolean isBingo = true;
-            for (int j = 0; j < 4; j++) {
-                Button button = findViewById(buttonIds[i * 4 + j]);
+            for (int j = 0; j < 5; j++) {
+                Button button = findViewById(buttonIds[i * 5 + j]);
                 if (button.getTag() == null || (int) button.getTag() == 0) {
                     isBingo = false;
                     break;
@@ -182,10 +214,10 @@ public class MainActivity extends Activity {
         }
 
         // Check for vertical BINGO
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             boolean isBingo = true;
-            for (int j = 0; j < 4; j++) {
-                Button button = findViewById(buttonIds[j * 4 + i]);
+            for (int j = 0; j < 5; j++) {
+                Button button = findViewById(buttonIds[j * 5 + i]);
                 if (button.getTag() == null || (int) button.getTag() == 0) {
                     isBingo = false;
                     break;
@@ -198,6 +230,4 @@ public class MainActivity extends Activity {
 
         return false;
     }
-
-
 }
