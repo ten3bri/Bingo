@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     private boolean gameActive = true;
     private ImageView bingoImage;
     private Button replayButton;
+    private TextView randomNumberTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,26 +55,30 @@ public class MainActivity extends Activity {
 
         progressBar = findViewById(R.id.progress_bar);
         toolbarTitle = findViewById(R.id.toolbar_title);
+        randomNumberTextView=findViewById(R.id.randomNumberTextView);
 
         random = new Random();
-        initializeButtons(random);
+        initializeButtons();
         generateRandomNumber(); // Losujemy pierwszą liczbę na początku
 
         startTimer();
     }
 
     private void startTimer() {
-        countDownTimer = new CountDownTimer(5000, 1000) {
+        countDownTimer = new CountDownTimer(6000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 long seconds = millisUntilFinished / 1000;
                 progressBar.setProgress((int) millisUntilFinished);
                 toolbarTitle.setText("Time left: " + seconds + "s");
+                randomNumberTextView.setText(("Select Number: "+selectedNumber));
 
                 // Jeśli to pierwsza sekunda, generuj nową liczbę i wyświetl ją w toolbarze
-                if (seconds == 6) {
+                if (seconds == 5) {
                     generateRandomNumber();
-                    toolbarTitle.setText(toolbarTitle.getText() + " - Selected Number: " + selectedNumber);
+                    toolbarTitle.setText("Time left: " + seconds + "s");
+                    randomNumberTextView.setText(("Select Number: "+selectedNumber));
+
                 }
             }
 
@@ -82,7 +87,6 @@ public class MainActivity extends Activity {
                 progressBar.setVisibility(ProgressBar.GONE);
                 toolbarTitle.setText("Time's up!");
                 gameActive = false;
-                displayBingo();
                 progressBar.postDelayed(() -> {
                     progressBar.setVisibility(ProgressBar.VISIBLE);
                     startTimer();
@@ -101,7 +105,7 @@ public class MainActivity extends Activity {
     }
 
     private void initializeButtons(){
-        availableNumbers = new HashSet<>();
+        availableNumbers = new ArrayList<>();
         for (int i = 1; i <= 50; i++) {
             availableNumbers.add(i);
         }
@@ -193,6 +197,7 @@ public class MainActivity extends Activity {
         Collections.shuffle(numbersList, random);
         selectedNumber = numbersList.get(0);
         availableNumbers.remove(selectedNumber);
+        toolbarTitle.setText("Select Number: "+selectedNumber);
     }
 
 

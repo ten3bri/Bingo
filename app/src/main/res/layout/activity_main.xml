@@ -32,11 +32,10 @@
             android:layout_gravity="end"
             android:visibility="gone" /> <!-- Ustaw widoczność na "gone" na starcie -->
         <TextView
-            android:id="@+id/selectedNumberTextView"
+            android:id="@+id/randomNumberTextView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Selected Number: "
-            android:textColor="@android:color/black"
+            android:textColor="@android:color/white"
             android:textSize="16sp"
             android:layout_gravity="center"
             android:layout_marginTop="16dp"/>
