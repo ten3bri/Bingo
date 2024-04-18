@@ -2,27 +2,31 @@ package com.example.bingo;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Random;
-import android.os.CountDownTimer;
-import android.graphics.Color;
-import java.util.HashSet;
-import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class MultiplayerGameLogic extends Activity {
 
-    private boolean isMultiplayerMode=false;
-    private boolean isGameStarted=false;
-    private String winnerID=null;
-    private HashMap<String,Boolean> playerStatusMap;
+    // Metoda ustawiająca flagę trybu wieloosobowego
+    public void setIsMultiplayer(boolean isMultiplayer) {
+        this.isMultiplayerMode = isMultiplayer;
+    }
+    private boolean isMultiplayerMode = false;
+    private boolean isGameStarted = false;
+    private boolean isWinner = false;
+    private HashMap<String, Boolean> playerStatusMap;
     private final int[] buttonIds = {
             R.id.button1, R.id.button2, R.id.button3, R.id.button4,
             R.id.button5, R.id.button6, R.id.button7, R.id.button8,
@@ -43,6 +47,7 @@ public class MainActivity extends Activity {
     private ImageView bingoImage;
     private Button replayButton;
     private TextView randomNumberTextView;
+    private ImageView loseMessageTextView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,26 +56,25 @@ public class MainActivity extends Activity {
 
         boolean isMultiplayer = getIntent().getBooleanExtra("isMultiplayer", false);
 
-
         bingoImage = findViewById(R.id.bingoImage);
         replayButton = findViewById(R.id.replayButton);
-
-        replayButton.setOnClickListener(replayButtonClickListener);
+        loseMessageTextView = findViewById(R.id.loseMessage);
 
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
+        loseMessageTextView.setVisibility(View.GONE);
 
         progressBar = findViewById(R.id.progress_bar);
         toolbarTitle = findViewById(R.id.toolbar_title);
-        randomNumberTextView=findViewById(R.id.randomNumberTextView);
+        randomNumberTextView = findViewById(R.id.randomNumberTextView);
 
         random = new Random();
-        playerStatusMap=new HashMap<>();
+        playerStatusMap = new HashMap<>();
 
         startGame();
     }
 
-    private void startGame() {
+    public void startGame() {
         if (!isGameStarted) {
             isGameStarted = true;
             initializeGame();
@@ -89,10 +93,11 @@ public class MainActivity extends Activity {
         ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
         Collections.shuffle(randomNumbers, random);
 
-        // Przypisanie unikalnych tekstów do przycisków
+        // Assign unique texts to buttons
         for (int i = 0; i < buttonIds.length; i++) {
             final Button button = findViewById(buttonIds[i]);
             button.setText(String.valueOf(randomNumbers.get(i)));
+            button.setTag(0); // Reset button tags
 
             int color = Color.GRAY;
             button.setBackgroundColor(color);
@@ -107,137 +112,126 @@ public class MainActivity extends Activity {
                 long seconds = millisUntilFinished / 1000;
                 progressBar.setProgress((int) millisUntilFinished);
                 toolbarTitle.setText("Time left: " + seconds + "s");
-                randomNumberTextView.setText(("Select Number: "+selectedNumber));
+                randomNumberTextView.setText("Select Number: " + selectedNumber);
 
-                // Jeśli to pierwsza sekunda, generuj nową liczbę i wyświetl ją w toolbarze
+                // If it's the first second, generate a new number and display it in the toolbar
                 if (seconds == 5) {
                     generateRandomNumber();
                     toolbarTitle.setText("Time left: " + seconds + "s");
-                    randomNumberTextView.setText(("Select Number: "+selectedNumber));
+                    randomNumberTextView.setText("Select Number: " + selectedNumber);
 
                 }
             }
 
             @Override
             public void onFinish() {
-                progressBar.setVisibility(ProgressBar.GONE);
+                progressBar.setVisibility(View.GONE);
                 toolbarTitle.setText("Time's up!");
+                handleGameEnd();
                 gameActive = false;
                 progressBar.postDelayed(() -> {
-                    progressBar.setVisibility(ProgressBar.VISIBLE);
+                    progressBar.setVisibility(View.VISIBLE);
                     startTimer();
                     gameActive = true;
+
                 }, 3000);
             }
         }.start();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
+    private void generateRandomNumber() {
+        ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
+        Collections.shuffle(numbersList, random);
+        selectedNumber = numbersList.get(0);
+        availableNumbers.remove((Integer) selectedNumber);
+
+        // Update UI with selected number
+        updateSelectedNumber(selectedNumber);
+    }
+
+    private void handleGameEnd() {
+        gameActive = false;
+
+        // Check if any player is the winner
+        String winnerID = null;
+        for (String playerID : playerStatusMap.keySet()) {
+            if (playerStatusMap.get(playerID)) { // If the player is marked as a winner
+                winnerID = playerID;
+                break;
+            }
+        }
+
+        if (winnerID != null) {
+            // Display the win message for the winner
+            showWinMessage(winnerID);
+        } else {
+            // Display the lose screen for other players
+            showLoseScreen();
         }
     }
 
-    /*private void initializeButtons(){
-        availableNumbers = new ArrayList<>();
-        for (int i = 1; i <= 50; i++) {
-            availableNumbers.add(i);
+    private void showWinMessage(String winnerID) {
+        displayBingo();
+    }
+
+    private void showLoseScreen() {
+        gameActive = false;
+        for (int buttonId : buttonIds) {
+            Button button = findViewById(buttonId);
+            button.setVisibility(View.GONE);
         }
-
-        ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
-        Collections.shuffle(randomNumbers, random);
-
-        // Przypisz unikalne teksty do przycisków
-        for (int i = 0; i <buttonIds.length; i++) {
-            final Button button=findViewById(buttonIds[i]);
-            button.setText(String.valueOf(randomNumbers.get(i)));
-
-            int kolor = Color.GRAY;
-            button.setBackgroundColor(kolor);
-            // Dodaj Listener do przycisku
-            button.setOnClickListener(buttonClickListener);
-        }
-    }*/
-
-
-
-    // Funkcja wyświetlająca BINGO i przycisk Replay oraz ukrywająca przyciski
+        toolbarTitle.setVisibility(View.GONE);
+        loseMessageTextView.setVisibility(View.VISIBLE);
+        replayButton.setVisibility(View.VISIBLE);
+    }
+    public void setWinner(boolean winner) {
+        isWinner = winner;
+    }
     private void displayBingo() {
-        gameActive=false;
+        gameActive = false;
         for (int buttonId : buttonIds) {
             Button button = findViewById(buttonId);
             button.setVisibility(View.GONE);
         }
 
+        toolbarTitle.setVisibility(View.GONE);
         bingoImage.setVisibility(View.VISIBLE);
         replayButton.setVisibility(View.VISIBLE);
     }
-
-
-    private final View.OnClickListener replayButtonClickListener = v -> {
-        // Przywróć przyciski do stanu początkowego
-
-
-        gameActive = true;
-        isGameStarted=false;
-
-        for (int buttonId : buttonIds) {
-            Button button = findViewById(buttonId);
-            button.setVisibility(View.VISIBLE);
-        }
-
-        // Ukryj obrazek i przycisk Replay
-        bingoImage.setVisibility(View.GONE);
-        replayButton.setVisibility(View.GONE);
-
-        initializeGame();
-        startTimer();
-    };
-
     private final View.OnClickListener buttonClickListener = v -> {
-        Button button = (Button) v;
+        Button button= (Button) v;
 
-        if(!gameActive){
-            return; //jesli czas uplynal zakoncz obsluge klikniecia
+        if (!gameActive) {
+            return; // If time is up, stop handling the click
         }
-        if(button.getText().toString().equals(String.valueOf(selectedNumber))){
+
+        if (button.getText().toString().equals(String.valueOf(selectedNumber))) {
             if (button.getTag() == null || (int) button.getTag() == 0) {
-                // Zmiana koloru na żółty po kliknięciu
+                // Change color to yellow on click
                 int color = Color.YELLOW;
                 button.setBackgroundColor(color);
-
                 button.setTag(1);
 
+                // Check for win
+                if (checkBingo()) {
+                    if (isMultiplayerMode) {
+                        // Mark the player as a winner
+                        setWinner(true);
+                    } else {
+                        // Display "BINGO"
+                        displayBingo();
+                    }
+                }
             } else {
-                // Powrót do pierwotnego koloru po drugim kliknięciu
-                int color = Color.GRAY; // Tu możesz użyć koloru pierwotnego
+                // Change back to original color on second click
+                int color = Color.GRAY; // You can use the original color here
                 button.setBackgroundColor(color);
                 button.setTag(0);
             }
         }
 
         button.requestLayout();
-
-        // Sprawdź, czy wszystkie przyciski w pionie lub poziomie są kliknięte i żółte
-        if (checkBingo()) {
-            // Jeśli tak, wyświetl napis "BINGO"
-            displayBingo();
-
-        }
     };
-
-
-
-
-    private void generateRandomNumber() {
-        ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
-        Collections.shuffle(numbersList, random);
-        selectedNumber = numbersList.get(0);
-        availableNumbers.remove(selectedNumber);
-    }
-
 
     @SuppressLint("UseCompatLoadingForDrawables")
     private boolean checkBingo() {
@@ -272,5 +266,10 @@ public class MainActivity extends Activity {
         }
 
         return false;
+    }
+
+    private void updateSelectedNumber(int number) {
+        // Update UI with the selected number
+        randomNumberTextView.setText("Select Number: "+number);
     }
 }
