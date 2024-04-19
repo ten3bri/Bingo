@@ -32,6 +32,12 @@
             android:screenOrientation="landscape"
             android:theme="@style/Theme.Bingo" />
         <activity
+            android:name=".MultiplayerGameLogic"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.Bingo" />
+        <activity
             android:name=".MultiplayerActivity"
             android:label="@string/multiplayer_activity_label"
             android:theme="@style/Theme.Bingo"

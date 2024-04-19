@@ -1,5 +1,7 @@
 package com.example.bingo;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
@@ -19,6 +21,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
+    private static final Logger logger=LogManager.getLogger(MultiplayerGameLogic.class);
     private boolean isMultiplayerMode=false;
     private boolean isGameStarted=false;
     private String winnerID=null;
@@ -74,6 +77,7 @@ public class MainActivity extends Activity {
         if (!isGameStarted) {
             isGameStarted = true;
             initializeGame();
+
             startTimer();
         } else {
             Toast.makeText(this, "Game already started!", Toast.LENGTH_SHORT).show();
@@ -102,6 +106,7 @@ public class MainActivity extends Activity {
 
     private void startTimer() {
         countDownTimer = new CountDownTimer(6000, 1000) {
+            @SuppressLint("SetTextI18n")
             @Override
             public void onTick(long millisUntilFinished) {
                 long seconds = millisUntilFinished / 1000;
@@ -140,27 +145,6 @@ public class MainActivity extends Activity {
         }
     }
 
-    /*private void initializeButtons(){
-        availableNumbers = new ArrayList<>();
-        for (int i = 1; i <= 50; i++) {
-            availableNumbers.add(i);
-        }
-
-        ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
-        Collections.shuffle(randomNumbers, random);
-
-        // Przypisz unikalne teksty do przycisków
-        for (int i = 0; i <buttonIds.length; i++) {
-            final Button button=findViewById(buttonIds[i]);
-            button.setText(String.valueOf(randomNumbers.get(i)));
-
-            int kolor = Color.GRAY;
-            button.setBackgroundColor(kolor);
-            // Dodaj Listener do przycisku
-            button.setOnClickListener(buttonClickListener);
-        }
-    }*/
-
 
 
     // Funkcja wyświetlająca BINGO i przycisk Replay oraz ukrywająca przyciski
@@ -170,7 +154,8 @@ public class MainActivity extends Activity {
             Button button = findViewById(buttonId);
             button.setVisibility(View.GONE);
         }
-
+        progressBar.setVisibility(View.GONE);
+        toolbarTitle.setVisibility(View.GONE);
         bingoImage.setVisibility(View.VISIBLE);
         replayButton.setVisibility(View.VISIBLE);
     }
@@ -191,6 +176,7 @@ public class MainActivity extends Activity {
         // Ukryj obrazek i przycisk Replay
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
+
 
         initializeGame();
         startTimer();
@@ -228,15 +214,29 @@ public class MainActivity extends Activity {
         }
     };
 
-
-
-
     private void generateRandomNumber() {
+        if (checkBingo()){
+            logger.info("Bingo game won");
+            return;
+        }
         ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
         Collections.shuffle(numbersList, random);
-        selectedNumber = numbersList.get(0);
-        availableNumbers.remove(selectedNumber);
+
+        // Iteruj przez listę wylosowanych liczb, aż znajdziesz taką, która jest dostępna
+        for (Integer number : numbersList) {
+            if (availableNumbers.contains(number)) {
+                selectedNumber = number;
+                availableNumbers.remove(number);
+                return; // Zakończ pętlę, gdy znajdziesz dostępną liczbę
+            }
+        }
+
+        // Jeśli nie znaleziono dostępnej liczby, obsłuż tę sytuację
+        logger.error("generateRandomNumber", "No available number found after shuffling.");
     }
+
+
+
 
 
     @SuppressLint("UseCompatLoadingForDrawables")

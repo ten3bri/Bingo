@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bingo"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 33
         versionCode = 1
         versionName = "1.0"
@@ -29,10 +29,16 @@ android {
     buildFeatures {
         viewBinding = true
     }
+    packagingOptions {
+        pickFirst("META-INF/DEPENDENCIES")
+    }
+
 }
 
 dependencies {
 
+    implementation("org.apache.logging.log4j:log4j-core:2.17.1")
+    implementation("org.apache.logging.log4j:log4j-api:2.17.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")

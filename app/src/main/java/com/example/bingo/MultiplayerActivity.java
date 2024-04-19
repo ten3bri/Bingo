@@ -16,6 +16,7 @@ public class MultiplayerActivity extends AppCompatActivity {
     private Button buttonStartGame;
     MultiplayerGameLogic multiplayerGameLogic;
 
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -41,12 +42,11 @@ public class MultiplayerActivity extends AppCompatActivity {
             }
 
             public void onFinish() {
-                buttonStartGame.setText("Start Game");
-                // Po zakończeniu odliczania uruchom MultiplayerGameLogic bezpośrednio
-                MultiplayerGameLogic multiplayerGameLogic = new MultiplayerGameLogic();
-                multiplayerGameLogic.setIsMultiplayer(true); // Ustaw flagę trybu multiplayer
-                multiplayerGameLogic.startGame(); // Uruchom logikę gry
+                 Intent intent = new Intent(MultiplayerActivity.this, MultiplayerGameLogic.class);
+                 intent.putExtra("is Multiplayer",true);
+                 startActivity(intent);
             }
         }.start();
     }
+
 }
