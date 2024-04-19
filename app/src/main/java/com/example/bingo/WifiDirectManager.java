@@ -1,89 +1,69 @@
 package com.example.bingo;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
 import android.content.IntentFilter;
-import android.net.wifi.p2p.WifiP2pConfig;
-import android.net.wifi.p2p.WifiP2pDevice;
 import android.net.wifi.p2p.WifiP2pManager;
-import android.util.Log;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.net.wifi.p2p.WifiP2pDeviceList;
+import android.net.wifi.p2p.WifiP2pDevice;
 
 public class WifiDirectManager {
-    private WifiP2pManager wifiP2pManager;
-    private WifiP2pManager.Channel channel;
+
     private Context context;
+    private WifiP2pManager manager;
+    private WifiP2pManager.Channel channel;
+    private WiFiDirectBroadcastReceiver receiver;
     private IntentFilter intentFilter;
-    private BroadcastReceiver broadcastReceiver;
-    private List<WifiP2pDevice> peerList = new ArrayList<>();
 
     public WifiDirectManager(Context context) {
         this.context = context;
-        wifiP2pManager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
-        channel = wifiP2pManager.initialize(context, context.getMainLooper(), null);
-
+        manager = (WifiP2pManager) context.getSystemService(Context.WIFI_P2P_SERVICE);
+        channel = manager.initialize(context, context.getMainLooper(), null);
+        receiver = new WiFiDirectBroadcastReceiver(manager, channel, this);
         intentFilter = new IntentFilter();
+        // Dodaj filtry dla interesujących cię akcji
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
         intentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
-
-        broadcastReceiver = new WiFiDirectBroadcastReceiver(wifiP2pManager, channel, this);
-        context.registerReceiver(broadcastReceiver, intentFilter);
     }
 
-    public void discoverPeers() {
-        wifiP2pManager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+    public IntentFilter getIntentFilter() {
+        return intentFilter;
+    }
+
+    public WiFiDirectBroadcastReceiver getBroadcastReceiver() {
+        return receiver;
+    }
+
+    // Metoda do zwracania obiektu PeerListListener
+    public WifiP2pManager.PeerListListener getPeerListListener() {
+        return new WifiP2pManager.PeerListListener() {
             @Override
-            public void onSuccess() {
-                Log.d("WiFiDirectManager", "Peer discovery initiated");
+            public void onPeersAvailable(WifiP2pDeviceList peers) {
+                // Tutaj możesz obsłużyć zmianę listy urządzeń Wi-Fi P2P
             }
-
-            @Override
-            public void onFailure(int reasonCode) {
-                Log.d("WiFiDirectManager", "Peer discovery failed with error code: " + reasonCode);
-            }
-        });
+        };
     }
 
-    public List<WifiP2pDevice> getPeerList() {
-        return peerList;
-    }
-
+    // Metoda do połączenia z urządzeniem
     public void connect(WifiP2pDevice device) {
-        WifiP2pConfig config = new WifiP2pConfig();
-        config.deviceAddress = device.deviceAddress;
-        wifiP2pManager.connect(channel, config, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Log.d("WiFiDirectManager", "Connection request successful");
-            }
-
-            @Override
-            public void onFailure(int reason) {
-                Log.d("WiFiDirectManager", "Connection request failed. Reason: " + reason);
-            }
-        });
+        // Tutaj możesz zaimplementować logikę połączenia z konkretnym urządzeniem
     }
 
-    public void disconnect() {
-        wifiP2pManager.removeGroup(channel, new WifiP2pManager.ActionListener() {
-            @Override
-            public void onSuccess() {
-                Log.d("WiFiDirectManager", "Disconnected successfully");
-            }
+    // Metoda do rozpoczęcia odkrywania urządzeń
+    public void discoverPeers() {
+        if (manager != null && channel != null) {
+            manager.discoverPeers(channel, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    // Odkrywanie urządzeń rozpoczęte
+                }
 
-            @Override
-            public void onFailure(int reason) {
-                Log.d("WiFiDirectManager", "Disconnect failed. Reason: " + reason);
-            }
-        });
-    }
-
-    public void stop() {
-        context.unregisterReceiver(broadcastReceiver);
+                @Override
+                public void onFailure(int reasonCode) {
+                    // Błąd podczas rozpoczynania odkrywania urządzeń
+                }
+            });
+        }
     }
 }

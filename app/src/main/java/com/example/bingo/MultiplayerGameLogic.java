@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Handler;
+import android.content.Intent;
 
 
 import java.util.ArrayList;
@@ -185,7 +186,10 @@ public class MultiplayerGameLogic extends Activity {
             }
 
             if (winnerID != null) {
-                showWinMessage(winnerID);
+                // Przekaż informację o wygranej do MultiplayerActivity
+                Intent intent = new Intent(this, MultiplayerActivity.class);
+                intent.putExtra("winnerID", winnerID);
+                startActivity(intent);
             } else {
                 showLoseScreen();
             }
@@ -194,6 +198,7 @@ public class MultiplayerGameLogic extends Activity {
             logger.error("handleGameEnd: Exception caught: {}", e.getMessage());
         }
     }
+
 
     private void showWinMessage(String winnerID) {
         try {
