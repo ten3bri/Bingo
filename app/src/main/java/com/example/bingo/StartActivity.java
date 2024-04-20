@@ -8,10 +8,14 @@ import android.widget.Button;
 
 
 public class StartActivity extends Activity {
+    private WifiDirectManager wifiDirectManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
+
+        wifiDirectManager = new WifiDirectManager(this);
 
         Button singlePlayerButton = findViewById(R.id.singlePlayerButton);
         Button multiplayerButton = findViewById(R.id.multiplayerButton);
@@ -26,8 +30,11 @@ public class StartActivity extends Activity {
         startActivity(intent);
     }
     private void startMultiplayerActivity(boolean isMultiplayer) {
+        wifiDirectManager.discoverPeers();
         Intent intent = new Intent(this, MultiplayerActivity.class);
         intent.putExtra("isMultiplayer", isMultiplayer);
         startActivity(intent);
+
+
     }
 }

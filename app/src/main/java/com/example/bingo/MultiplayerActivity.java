@@ -67,12 +67,7 @@ public class MultiplayerActivity extends AppCompatActivity {
     }
 
     private boolean checkPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSIONS_REQUEST_CODE);
-            return false;
-        }
+
         return true;
     }
 
@@ -82,6 +77,7 @@ public class MultiplayerActivity extends AppCompatActivity {
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Rejestracja odbiornika Wi-Fi Direct
+                wifiDirectManager.discoverPeers();;
                 registerReceiver(wifiDirectManager.getBroadcastReceiver(), wifiDirectManager.getIntentFilter());
             } else {
                 Toast.makeText(this, "Permissions are required for Wi-Fi Direct functionality",
@@ -107,6 +103,14 @@ public class MultiplayerActivity extends AppCompatActivity {
 
     private void sendStartGameMessage() {
         if (wifiP2pManager != null && channel != null) {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+                // Brak wymaganych uprawnień, należy je zwrócić
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES},
+                        PERMISSIONS_REQUEST_CODE);
+                return;
+            }
+            // Mamy wymagane uprawnienia, więc kontynuujemy z operacją Wi-Fi Direct
             wifiP2pManager.requestPeers(channel, peers -> {
                 peerList.clear();
                 peerList.addAll(peers.getDeviceList());
@@ -132,4 +136,5 @@ public class MultiplayerActivity extends AppCompatActivity {
             });
         }
     }
+
 }

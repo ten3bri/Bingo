@@ -60,6 +60,8 @@ public class MultiplayerGameLogic extends Activity {
             boolean isMultiplayer = getIntent().getBooleanExtra("isMultiplayer", false);
             logger.info("onCreate: isMultiplayer = {}", isMultiplayer);
 
+            setIsMultiplayer(isMultiplayer);
+
             bingoImage = findViewById(R.id.bingoImage);
             replayButton = findViewById(R.id.replayButton);
             loseMessageTextView = findViewById(R.id.loseMessage);
