@@ -156,6 +156,7 @@ public class MainActivity extends Activity {
         }
         progressBar.setVisibility(View.GONE);
         toolbarTitle.setVisibility(View.GONE);
+        randomNumberTextView.setVisibility(View.GONE);
         bingoImage.setVisibility(View.VISIBLE);
         replayButton.setVisibility(View.VISIBLE);
     }
@@ -177,9 +178,8 @@ public class MainActivity extends Activity {
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
 
+        finish();
 
-        initializeGame();
-        startTimer();
     };
 
     private final View.OnClickListener buttonClickListener = v -> {

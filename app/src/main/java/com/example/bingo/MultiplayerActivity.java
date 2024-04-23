@@ -51,7 +51,10 @@ public class MultiplayerActivity extends AppCompatActivity {
         wifiP2pManager = (WifiP2pManager) getSystemService(Context.WIFI_P2P_SERVICE);
         channel = wifiP2pManager.initialize(this, getMainLooper(), null);
 
-        buttonStartGame.setOnClickListener(v -> startGame());
+        buttonStartGame.setOnClickListener(v -> {
+            startGame();
+            buttonStartGame.setEnabled(false);
+        });
 
         if (checkPermissions()) {
             // Rejestracja odbiornika Wi-Fi Direct
@@ -77,7 +80,8 @@ public class MultiplayerActivity extends AppCompatActivity {
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Rejestracja odbiornika Wi-Fi Direct
-                wifiDirectManager.discoverPeers();;
+                wifiDirectManager.discoverPeers();
+                ;
                 registerReceiver(wifiDirectManager.getBroadcastReceiver(), wifiDirectManager.getIntentFilter());
             } else {
                 Toast.makeText(this, "Permissions are required for Wi-Fi Direct functionality",
