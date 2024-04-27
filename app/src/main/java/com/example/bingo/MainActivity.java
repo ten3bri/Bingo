@@ -44,8 +44,11 @@ public class MainActivity extends Activity {
     private ArrayList<Integer> availableNumbers;
     private boolean gameActive = true;
     private ImageView bingoImage;
+    private ImageView loseMessageTextView;
     private Button replayButton;
     private TextView randomNumberTextView;
+    private int attempts=0;
+    private final int MAX_ATTEMPTS=50;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +59,7 @@ public class MainActivity extends Activity {
 
 
         bingoImage = findViewById(R.id.bingoImage);
+        loseMessageTextView=findViewById(R.id.loseMessage);
         replayButton = findViewById(R.id.replayButton);
 
         replayButton.setOnClickListener(replayButtonClickListener);
@@ -213,12 +217,28 @@ public class MainActivity extends Activity {
 
         }
     };
-
+    private void showLoseScreen() {
+        try {
+            for (int buttonId : buttonIds) {
+                Button button = findViewById(buttonId);
+                button.setVisibility(View.GONE);
+            }
+            toolbarTitle.setVisibility(View.GONE);
+            loseMessageTextView.setVisibility(View.VISIBLE);
+            replayButton.setVisibility(View.VISIBLE);
+            logger.info("showLoseScreen: Lose screen displayed");
+        } catch (Exception e) {
+            logger.error("showLoseScreen: Exception caught: {}", e.getMessage());
+        }
+    }
     private void generateRandomNumber() {
         if (checkBingo()){
             logger.info("Bingo game won");
             return;
         }
+        if(attempts>=MAX_ATTEMPTS){
+            showLoseScreen();
+        };
         ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
         Collections.shuffle(numbersList, random);
 
@@ -227,6 +247,7 @@ public class MainActivity extends Activity {
             if (availableNumbers.contains(number)) {
                 selectedNumber = number;
                 availableNumbers.remove(number);
+                attempts++;
                 return; // Zakończ pętlę, gdy znajdziesz dostępną liczbę
             }
         }

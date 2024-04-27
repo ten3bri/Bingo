@@ -71,6 +71,15 @@ public class MultiplayerActivity extends AppCompatActivity {
 
     private boolean checkPermissions() {
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.NEARBY_WIFI_DEVICES) != PackageManager.PERMISSION_GRANTED) {
+            // Brakuje wymaganych uprawnień
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.NEARBY_WIFI_DEVICES},
+                    PERMISSIONS_REQUEST_CODE);
+            return false;
+        }
         return true;
     }
 
@@ -79,11 +88,11 @@ public class MultiplayerActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSIONS_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Rejestracja odbiornika Wi-Fi Direct
+                // Uprawnienia zostały przyznane, można kontynuować działanie
                 wifiDirectManager.discoverPeers();
-                ;
                 registerReceiver(wifiDirectManager.getBroadcastReceiver(), wifiDirectManager.getIntentFilter());
             } else {
+                // Uprawnienia nie zostały przyznane, należy poinformować użytkownika
                 Toast.makeText(this, "Permissions are required for Wi-Fi Direct functionality",
                         Toast.LENGTH_SHORT).show();
             }
