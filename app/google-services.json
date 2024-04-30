@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "36604012548",
+    "project_id": "bingo-a1100",
+    "storage_bucket": "bingo-a1100.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:36604012548:android:93926c1e8b6474e7b26d51",
+        "android_client_info": {
+          "package_name": "com.example.bingo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9ousQcPkyVFJ8fqazoi08XKv-nNPuy1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

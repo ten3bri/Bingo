@@ -1,5 +1,4 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
@@ -10,6 +9,13 @@
         android:layout_height="wrap_content"
         android:hint="Enter Nickname"/>
 
+    <EditText
+        android:id="@+id/editTextGamePassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Game Password"
+        android:minHeight="48dp" />
+
     <!-- Lista dostępnych urządzeń -->
     <ListView
         android:id="@+id/listViewDevices"
@@ -17,10 +23,11 @@
         android:layout_height="0dp"
         android:layout_weight="1"/>
 
-    <!-- Przycisk startujący grę -->
+    <!-- Przycisk dołączający do gry -->
     <Button
-        android:id="@+id/buttonStartGame"
+        android:id="@+id/buttonJoinGame"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Game"/>
+        android:text="Join Game"/>
+
 </LinearLayout>
