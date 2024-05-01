@@ -47,10 +47,14 @@ public class MultiplayerActivity extends AppCompatActivity {
     }
 
     private void joinGame(String gamePassword) {
+        Log.d("MultiplayerActivity", "Metoda joinGame() została wywołana");
+
         firebaseManager.joinGame(gamePassword, new OnCompleteListener<Boolean>() {
             @Override
             public void onComplete(@NonNull Task<Boolean> task) {
-                if (task.isSuccessful() && task.getResult()) {
+
+                if(task.isSuccessful() && task.getResult()){
+                    Log.d("MultiplayerActivity","przechodzi ifa w onComplete()");
                     // Pomyślnie dołączono do gry, rozpocznij odliczanie
                     new CountDownTimer(10000, 1000) {
                         public void onTick(long millisUntilFinished) {
@@ -88,9 +92,10 @@ public class MultiplayerActivity extends AppCompatActivity {
 
 
     private void startGame() {
+        Log.d("MultiplayerActivity","Metoda startGame zostala wywolala");
         Intent intent = new Intent(MultiplayerActivity.this, MultiplayerGameLogic.class);
         intent.putExtra("isMultiplayer", true);
         startActivity(intent);
-        finish();
+        //finish();
     }
 }
