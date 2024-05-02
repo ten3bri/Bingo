@@ -1,7 +1,6 @@
 package com.example.bingo;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import android.util.Log;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
@@ -21,7 +20,6 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
-    private static final Logger logger=LogManager.getLogger(MultiplayerGameLogic.class);
     private boolean isMultiplayerMode=false;
     private boolean isGameStarted=false;
     private String winnerID=null;
@@ -226,14 +224,14 @@ public class MainActivity extends Activity {
             toolbarTitle.setVisibility(View.GONE);
             loseMessageTextView.setVisibility(View.VISIBLE);
             replayButton.setVisibility(View.VISIBLE);
-            logger.info("showLoseScreen: Lose screen displayed");
+            Log.d("showLoseScreen",": Lose screen displayed");
         } catch (Exception e) {
-            logger.error("showLoseScreen: Exception caught: {}", e.getMessage());
+            Log.e("showLoseScreen: Exception caught: {}", e.getMessage());
         }
     }
     private void generateRandomNumber() {
         if (checkBingo()){
-            logger.info("Bingo game won");
+            //logger.info("Bingo game won");
             return;
         }
         if(attempts>=MAX_ATTEMPTS){
@@ -253,7 +251,7 @@ public class MainActivity extends Activity {
         }
 
         // Jeśli nie znaleziono dostępnej liczby, obsłuż tę sytuację
-        logger.error("generateRandomNumber", "No available number found after shuffling.");
+        Log.e("generateRandomNumber", "No available number found after shuffling.");
     }
 
 

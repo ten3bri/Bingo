@@ -1,34 +1,52 @@
 package com.example.bingo;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
-import android.os.Handler;
-import android.content.Intent;
-
-
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.DataSnapshot;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Random;
+import android.graphics.Color;
+
+import androidx.annotation.NonNull;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.OnCompleteListener;
 
 
 public class MultiplayerGameLogic extends Activity {
 
-    private static final Logger logger=LogManager.getLogger(MultiplayerGameLogic.class);
-    private boolean isMultiplayerMode = true;
-    private boolean isGameStarted = false;
-    private boolean isWinner = false;
-    private HashMap<String, Boolean> playerStatusMap;
+    private FirebaseAuth firebaseAuth;
+    private DatabaseReference gamesRef;
+    private ProgressBar progressBar;
+    private TextView toolbarTitle;
+    private ImageView loseMessageTextView;
+    private ImageView bingoImage;
+    private Button replayButton;
+    private TextView randomNumberTextView;
+    private CountDownTimer countDownTimer;
+    private Random random;
+    private int selectedNumber;
+    private ArrayList<Integer> availableNumbers;
+    private boolean gameActive = false;
+    private final int MAX_ATTEMPTS = 50;
+    private int attempts = 0;
+    private String gamePassword;
+    private FirebaseManager firebaseManager;
+
     private final int[] buttonIds = {
             R.id.button1, R.id.button2, R.id.button3, R.id.button4,
             R.id.button5, R.id.button6, R.id.button7, R.id.button8,
@@ -39,90 +57,86 @@ public class MultiplayerGameLogic extends Activity {
             R.id.button25
     };
 
-
-    private TextView toolbarTitle;
-    private CountDownTimer countDownTimer;
-    private Random random;
-    private int selectedNumber;
-    private ArrayList<Integer> availableNumbers;
-    private boolean gameActive = true;
-    private ImageView bingoImage;
-    private Button replayButton;
-    private TextView randomNumberTextView;
-    private ImageView loseMessageTextView;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        try {
-            boolean isMultiplayer = getIntent().getBooleanExtra("isMultiplayer", false);
-            logger.info("onCreate: isMultiplayer = {}", isMultiplayer);
+        firebaseAuth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = firebaseAuth.getCurrentUser();
 
-            setIsMultiplayer(isMultiplayer);
-
-            bingoImage = findViewById(R.id.bingoImage);
-            replayButton = findViewById(R.id.replayButton);
-            loseMessageTextView = findViewById(R.id.loseMessage);
-
-            replayButton.setOnClickListener(replayButtonClickListener);
+        FirebaseManager firebaseManager = new FirebaseManager(this);
 
 
-            bingoImage.setVisibility(View.GONE);
-            replayButton.setVisibility(View.GONE);
-            loseMessageTextView.setVisibility(View.GONE);
+        gamesRef = FirebaseDatabase.getInstance().getReference("games");
 
-            randomNumberTextView=findViewById(R.id.randomNumberTextView);
+        progressBar = findViewById(R.id.progress_bar);
+        toolbarTitle = findViewById(R.id.toolbar_title);
+        randomNumberTextView = findViewById(R.id.randomNumberTextView);
+        random = new Random();
 
-            toolbarTitle = findViewById(R.id.toolbar_title);
+        bingoImage = findViewById(R.id.bingoImage);
+        loseMessageTextView=findViewById(R.id.loseMessage);
+        replayButton = findViewById(R.id.replayButton);
 
-            random = new Random();
-            playerStatusMap = new HashMap<>();
+        replayButton.setOnClickListener(replayButtonClickListener);
 
-            startGame();
-        } catch (Exception e) {
-            logger.error("onCreate: Exception caught: {}", e.getMessage());
-        }
+        bingoImage.setVisibility(View.GONE);
+        replayButton.setVisibility(View.GONE);
+
+
+        // Odbierz hasło pokoju z poprzedniej aktywności
+        gamePassword = getIntent().getStringExtra("gamePassword");
+
+        // Sprawdź, czy obaj gracze dołączyli do gry
+        checkPlayersJoined(gamePassword);
+
     }
+    private final View.OnClickListener replayButtonClickListener = v -> {
+        // Przywróć przyciski do stanu początkowego
+
+
+        gameActive = true;
+        //isGameStarted=false;
+
+        for (int buttonId : buttonIds) {
+            Button button = findViewById(buttonId);
+            button.setVisibility(View.VISIBLE);
+        }
+
+        // Ukryj obrazek i przycisk Replay
+        bingoImage.setVisibility(View.GONE);
+        replayButton.setVisibility(View.GONE);
+
+        finish();
+
+    };
 
     private void startGame() {
-        try {
-            if (!isGameStarted) {
-                isGameStarted = true;
-                logger.info("startGame: Game started");
-                initializeGame();
-                startTimer();
-            } else {
-                Toast.makeText(this, "Game already started!", Toast.LENGTH_SHORT).show();
-                logger.info("startGame: Game already started");
-            }
-        } catch (Exception e) {
-            logger.error("startGame: Exception caught: {}", e.getMessage());
+        if (!gameActive) {
+            gameActive = true;
+            initializeGame();
+            startTimer();
+            listenForGameResults(gamePassword);
+
         }
     }
 
     private void initializeGame() {
-        try {
-            availableNumbers = new ArrayList<>();
-            for (int i = 1; i <= 50; i++) {
-                availableNumbers.add(i);
-            }
+        availableNumbers = new ArrayList<>();
+        for (int i = 1; i <= 50; i++) {
+            availableNumbers.add(i);
+        }
 
-            ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
-            Collections.shuffle(randomNumbers, random);
+        ArrayList<Integer> randomNumbers = new ArrayList<>(availableNumbers);
+        Collections.shuffle(randomNumbers, random);
 
-            for (int i = 0; i < buttonIds.length; i++) {
-                final Button button = findViewById(buttonIds[i]);
-                button.setText(String.valueOf(randomNumbers.get(i)));
-                button.setTag(0);
-                int color = Color.GRAY;
-                button.setBackgroundColor(color);
-                button.setOnClickListener(buttonClickListener);
-            }
-            logger.info("initializeGame: Game initialized");
-        } catch (Exception e) {
-            logger.error("initializeGame: Exception caught: {}", e.getMessage());
+        // Przypisz unikalne teksty do przycisków
+        for (int i = 0; i < buttonIds.length; i++) {
+            final Button button = findViewById(buttonIds[i]);
+            button.setText(String.valueOf(randomNumbers.get(i)));
+            button.setBackgroundColor(Color.GRAY);
+            button.setOnClickListener(buttonClickListener);
         }
     }
 
@@ -130,37 +144,83 @@ public class MultiplayerGameLogic extends Activity {
         countDownTimer = new CountDownTimer(6000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
-                long seconds=millisUntilFinished/1000;
+                long seconds = millisUntilFinished / 1000;
+                progressBar.setProgress((int) millisUntilFinished);
                 toolbarTitle.setText("Time left: " + seconds + "s");
-                randomNumberTextView.setText(("Select Number: " + selectedNumber));
-                // Jeśli to pierwsza sekunda, generuj nową liczbę i wyświetl ją w toolbarze
-                if (millisUntilFinished / 1000 == 5) {
+                randomNumberTextView.setText(("Select Number: "+selectedNumber));
+
+                // Generuj nową liczbę, jeśli to pierwsza sekunda
+                if (seconds == 5) {
                     generateRandomNumber();
                     toolbarTitle.setText("Time left: " + seconds + "s");
-                    randomNumberTextView.setText(("Select Number: " + selectedNumber));
+                    randomNumberTextView.setText(("Select Number: "+selectedNumber));
+
                 }
             }
 
-
             @Override
             public void onFinish() {
+                progressBar.setVisibility(ProgressBar.GONE);
                 toolbarTitle.setText("Time's up!");
                 gameActive = false;
-                new Handler().postDelayed(() -> {
-                    startTimer(); // Uruchom ponownie licznik czasu
+                progressBar.postDelayed(() -> {
+                    progressBar.setVisibility(ProgressBar.VISIBLE);
+                    startTimer();
                     gameActive = true;
+                    listenForGameResults(gamePassword);
                 }, 3000);
             }
-
         }.start();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+    }
+
+    private final View.OnClickListener buttonClickListener = v -> {
+        Button button = (Button) v;
+
+        if(!gameActive){
+            return; //jesli czas uplynal zakoncz obsluge klikniecia
+        }
+        if(button.getText().toString().equals(String.valueOf(selectedNumber))){
+            if (button.getTag() == null || (int) button.getTag() == 0) {
+                // Zmiana koloru na żółty po kliknięciu
+                int color = Color.YELLOW;
+                button.setBackgroundColor(color);
+
+                button.setTag(1);
+
+            } else {
+                // Powrót do pierwotnego koloru po drugim kliknięciu
+                int color = Color.GRAY; // Tu możesz użyć koloru pierwotnego
+                button.setBackgroundColor(color);
+                button.setTag(0);
+            }
+        }
+        button.requestLayout();
+
+        // Sprawdź, czy wszystkie przyciski w pionie lub poziomie są kliknięte i żółte
+        if (checkBingo()) {
+            // Jeśli tak, wyświetl napis "BINGO"
+            displayBingo();
+
+        }
+    };
 
     private void generateRandomNumber() {
+        // Generuj losową liczbę
         if (checkBingo()){
-            logger.info("Bingo game won");
+            //logger.info("Bingo game won");
             return;
         }
+        if(attempts>=MAX_ATTEMPTS){
+            showLoseScreen();
+        };
         ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
         Collections.shuffle(numbersList, random);
 
@@ -169,46 +229,113 @@ public class MultiplayerGameLogic extends Activity {
             if (availableNumbers.contains(number)) {
                 selectedNumber = number;
                 availableNumbers.remove(number);
+                attempts++;
                 return; // Zakończ pętlę, gdy znajdziesz dostępną liczbę
             }
         }
 
         // Jeśli nie znaleziono dostępnej liczby, obsłuż tę sytuację
-        logger.error("generateRandomNumber", "No available number found after shuffling.");
+        Log.e("generateRandomNumber", "No available number found after shuffling.");
+
     }
 
-    private void handleGameEnd() {
-        try {
-            String winnerID = null;
-            for (String playerID : playerStatusMap.keySet()) {
-                if (playerStatusMap.get(playerID)) {
-                    winnerID = playerID;
+    @SuppressLint("UseCompatLoadingForDrawables")
+    private boolean checkBingo() {
+        // Check for horizontal BINGO
+        for (int i = 0; i < 5; i++) {
+            boolean isBingo = true;
+            for (int j = 0; j < 5; j++) {
+                Button button = findViewById(buttonIds[i * 5 + j]);
+                if (button.getTag() == null || (int) button.getTag() == 0) {
+                    isBingo = false;
                     break;
                 }
             }
-
-            if (winnerID != null) {
-                // Przekaż informację o wygranej do MultiplayerActivity
-                Intent intent = new Intent(this, MultiplayerActivity.class);
-                intent.putExtra("winnerID", winnerID);
-                startActivity(intent);
-            } else {
-                showLoseScreen();
+            if (isBingo) {
+               setWinningPlayerWonStatus(gamePassword);
+                return true;
             }
-            logger.info("handleGameEnd: Game ended");
-        } catch (Exception e) {
-            logger.error("handleGameEnd: Exception caught: {}", e.getMessage());
         }
+
+        // Check for vertical BINGO
+        for (int i = 0; i < 5; i++) {
+            boolean isBingo = true;
+            for (int j = 0; j < 5; j++) {
+                Button button = findViewById(buttonIds[j * 5 + i]);
+                if (button.getTag() == null || (int) button.getTag() == 0) {
+                    isBingo = false;
+                    break;
+                }
+            }
+            if (isBingo) {
+                setWinningPlayerWonStatus(gamePassword);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void setWinningPlayerWonStatus(String gamePassword) {
+        DatabaseReference playersRef = FirebaseDatabase.getInstance().getReference("games")
+                .child(gamePassword).child("players");
+
+        playersRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
+                    boolean hasWon = playerSnapshot.child("won").getValue(Boolean.class);
+                    if (hasWon) {
+                        // Znaleziono zwycięskiego gracza
+                        String winningPlayerNickname = playerSnapshot.getKey();
+                        // Ustaw flagę "won" na true dla zwycięskiego gracza
+                        setPlayerWinStatus(gamePassword, winningPlayerNickname, true);
+                        // Możesz wykorzystać nick zwycięzcy w inny sposób w swojej grze
+                        // Na przykład wyświetl go na ekranie końcowym lub wyslij powiadomienie do pozostałych graczy
+                        return;
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Obsługa błędu
+            }
+        });
     }
 
 
-    private void showWinMessage(String winnerID) {
-        try {
-            displayBingo();
-            logger.info("showWinMessage: Winner ID: {}", winnerID);
-        } catch (Exception e) {
-            logger.error("showWinMessage: Exception caught: {}", e.getMessage());
+    private void setPlayerWinStatus(String gamePassword, String nickname, boolean hasWon) {
+        // Ustawienie statusu wygranej gracza w bazie danych
+        firebaseManager.setPlayerWinStatus(gamePassword, nickname, hasWon, new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful()) {
+                    // Status wygranej gracza został pomyślnie zaktualizowany
+                    // Tutaj możesz umieścić kod do obsługi dalszych działań po aktualizacji statusu
+                } else {
+                    // Wystąpił błąd podczas aktualizacji statusu wygranej gracza
+                    // Tutaj możesz obsłużyć błąd, np. poprzez wyświetlenie komunikatu użytkownikowi
+                }
+            }
+        });
+    }
+
+    // Funkcja wyświetlająca ekran przegranego gracza
+
+
+    // Funkcja wyświetlająca ekran wygranego gracza
+    private void displayBingo() {
+        gameActive=false;
+        for (int buttonId : buttonIds) {
+            Button button = findViewById(buttonId);
+            button.setVisibility(View.GONE);
         }
+        progressBar.setVisibility(View.GONE);
+        toolbarTitle.setVisibility(View.GONE);
+        randomNumberTextView.setVisibility(View.GONE);
+        bingoImage.setVisibility(View.VISIBLE);
+        replayButton.setVisibility(View.VISIBLE);
     }
 
     private void showLoseScreen() {
@@ -220,124 +347,74 @@ public class MultiplayerGameLogic extends Activity {
             toolbarTitle.setVisibility(View.GONE);
             loseMessageTextView.setVisibility(View.VISIBLE);
             replayButton.setVisibility(View.VISIBLE);
-            logger.info("showLoseScreen: Lose screen displayed");
+            Log.d("showLoseScreen",": Lose screen displayed");
         } catch (Exception e) {
-            logger.error("showLoseScreen: Exception caught: {}", e.getMessage());
+            Log.e("showLoseScreen: Exception caught: {}", e.getMessage());
         }
     }
 
-    private void displayBingo() {
-        try {
-            for (int buttonId : buttonIds) {
-                Button button = findViewById(buttonId);
-                button.setVisibility(View.GONE);
-            }
-            toolbarTitle.setVisibility(View.GONE);
-            bingoImage.setVisibility(View.VISIBLE);
-            replayButton.setVisibility(View.VISIBLE);
-            logger.info("displayBingo: Bingo displayed");
-        } catch (Exception e) {
-            logger.error("displayBingo: Exception caught: {}", e.getMessage());
-        }
-    }
-
-    public void setWinner(boolean winner) {
-        isWinner = winner;
-        logger.info("setWinner: Winner set to {}", winner);
-    }
-
-    private void updateSelectedNumber(int number) {
-        randomNumberTextView.setText("Select Number: "+number);
-        logger.info("updateSelectedNumber: Selected number updated to {}", number);
-    }
-
-    private final View.OnClickListener replayButtonClickListener = v -> {
-        // Przywróć przyciski do stanu początkowego
-
-
-        gameActive = true;
-        isGameStarted=false;
-
-        for (int buttonId : buttonIds) {
-            Button button = findViewById(buttonId);
-            button.setVisibility(View.VISIBLE);
-        }
-
-        // Ukryj obrazek i przycisk Replay
-        bingoImage.setVisibility(View.GONE);
-        replayButton.setVisibility(View.GONE);
-
-        initializeGame();
-        startTimer();
-    };
-
-    private final View.OnClickListener buttonClickListener = v -> {
-        Button button= (Button) v;
-
-        if (!gameActive) {
-            return;
-        }
-
-        if (button.getText().toString().equals(String.valueOf(selectedNumber))) {
-            if (button.getTag() == null || (int) button.getTag() == 0) {
-                int color = Color.YELLOW;
-                button.setBackgroundColor(color);
-                button.setTag(1);
-
-                if (checkBingo()) {
-                    if (isMultiplayerMode) {
-                        setWinner(true);
+    // Usuń pokój gry z bazy danych po zakończeniu gry
+    private void deleteGameRoom(String gamePassword) {
+        gamesRef.child(gamePassword).removeValue()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        // Usunięto pokój gry
                     } else {
-                        displayBingo();
+                        // Nie udało się usunąć pokoju gry
                     }
-                }
-            } else {
-                int color = Color.GRAY;
-                button.setBackgroundColor(color);
-                button.setTag(0);
-            }
-        }
+                });
+    }
 
-        button.requestLayout();
-        logger.info("buttonClickListener: Button clicked");
-    };
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private boolean checkBingo() {
-        try {
-            for (int i = 0; i < 5; i++) {
-                boolean isBingo = true;
-                for (int j = 0; j < 5; j++) {
-                    Button button = findViewById(buttonIds[i * 5 + j]);
-                    if (button.getTag() == null || (int) button.getTag() == 0) {
-                        isBingo = false;
-                        break;
-                    }
-                }
-                if (isBingo) {
-                    return true;
+    // Sprawdź, czy obaj gracze dołączyli do gry
+    private void checkPlayersJoined(String gamePassword) {
+        gamesRef.child(gamePassword).child("players").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.getChildrenCount() >= 2) {
+                    // Obaj gracze dołączyli do gry, zacznij grę
+                    startGame();
                 }
             }
 
-            for (int i = 0; i < 5; i++) {
-                boolean isBingo = true;
-                for (int j = 0; j < 5; j++) {
-                    Button button = findViewById(buttonIds[j * 5 + i]);
-                    if (button.getTag() == null || (int) button.getTag() == 0) {
-                        isBingo = false;
-                        break;
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Obsługa błędu
+            }
+        });
+    }
+
+    private String getPlayerNicknameForBingo(DataSnapshot dataSnapshot) {
+        String playerNickname = "";
+        for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
+            // Tutaj pobieramy nick gracza, może to być np. nazwa węzła, jeśli nicki są przechowywane jako klucze
+            String nickname = playerSnapshot.getKey();
+            // Tutaj możesz przeprowadzić dodatkowe sprawdzenia, czy nick spełnia warunki, które potrzebujesz
+            playerNickname = nickname;
+            break; // Jeśli chcesz pobrać tylko pierwszego gracza, możesz przerwać pętlę
+        }
+        return playerNickname;
+    }
+    private void listenForGameResults(String gamePassword) {
+        gamesRef.child(gamePassword).child("players").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
+                    String nickname = playerSnapshot.getKey();
+                    boolean won = playerSnapshot.child("won").getValue(Boolean.class);
+                    if (won) {
+                        // Gracz o nicku 'nickname' wygrał, pokaż ekran przegranego
+                        showLoseScreen();
+                        return; // Zakończ pętlę po znalezieniu jednego gracza, który wygrał
                     }
                 }
-                if (isBingo) {
-                    return true;
-                }
             }
-            logger.info("checkBingo: Bingo checked");
-        } catch (Exception e) {
-            logger.error("checkBingo: Exception caught: {}", e.getMessage());
-        }
-        return false;
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Obsługa błędu
+            }
+        });
     }
-    public void setIsMultiplayer(boolean isMultiplayer) {
-        this.isMultiplayerMode = isMultiplayer;
-    }
+
+
 }

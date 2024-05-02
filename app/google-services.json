@@ -1,8 +1,8 @@
 {
   "project_info": {
     "project_number": "36604012548",
+    "firebase_url": "https://bingo-a1100-default-rtdb.europe-west1.firebasedatabase.app",
     "project_id": "bingo-a1100",
-    "firebase_url": "https://bingo-a1100-default-rtdb.europe-central2-c.firebasedatabase.app",
     "storage_bucket": "bingo-a1100.appspot.com"
   },
   "client": [
