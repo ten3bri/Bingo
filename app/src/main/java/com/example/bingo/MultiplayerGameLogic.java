@@ -65,8 +65,7 @@ public class MultiplayerGameLogic extends Activity {
         firebaseAuth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = firebaseAuth.getCurrentUser();
 
-        FirebaseManager firebaseManager = new FirebaseManager(this);
-
+        firebaseManager = new FirebaseManager(this); // Poprawka: zainicjowanie firebaseManager
 
         gamesRef = FirebaseDatabase.getInstance().getReference("games");
 
@@ -84,32 +83,15 @@ public class MultiplayerGameLogic extends Activity {
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
 
-
         // Odbierz hasło pokoju z poprzedniej aktywności
         gamePassword = getIntent().getStringExtra("gamePassword");
 
         // Sprawdź, czy obaj gracze dołączyli do gry
         checkPlayersJoined(gamePassword);
-
     }
+
     private final View.OnClickListener replayButtonClickListener = v -> {
-        // Przywróć przyciski do stanu początkowego
-
-
-        gameActive = true;
-        //isGameStarted=false;
-
-        for (int buttonId : buttonIds) {
-            Button button = findViewById(buttonId);
-            button.setVisibility(View.VISIBLE);
-        }
-
-        // Ukryj obrazek i przycisk Replay
-        bingoImage.setVisibility(View.GONE);
-        replayButton.setVisibility(View.GONE);
-
-        finish();
-
+        finish(); // Poprawka: zakończenie gry
     };
 
     private void startGame() {
@@ -118,7 +100,6 @@ public class MultiplayerGameLogic extends Activity {
             initializeGame();
             startTimer();
             listenForGameResults(gamePassword);
-
         }
     }
 
@@ -154,7 +135,6 @@ public class MultiplayerGameLogic extends Activity {
                     generateRandomNumber();
                     toolbarTitle.setText("Time left: " + seconds + "s");
                     randomNumberTextView.setText(("Select Number: "+selectedNumber));
-
                 }
             }
 
@@ -188,13 +168,12 @@ public class MultiplayerGameLogic extends Activity {
             return; //jesli czas uplynal zakoncz obsluge klikniecia
         }
         if(button.getText().toString().equals(String.valueOf(selectedNumber))){
-            if (button.getTag() == null || (int) button.getTag() == 0) {
+            int tag = button.getTag() == null ? 0 : (int) button.getTag(); // Poprawka: ustawienie tagu na 0, jeśli nie jest ustawiony
+            if (tag == 0) {
                 // Zmiana koloru na żółty po kliknięciu
                 int color = Color.YELLOW;
                 button.setBackgroundColor(color);
-
                 button.setTag(1);
-
             } else {
                 // Powrót do pierwotnego koloru po drugim kliknięciu
                 int color = Color.GRAY; // Tu możesz użyć koloru pierwotnego
@@ -208,19 +187,13 @@ public class MultiplayerGameLogic extends Activity {
         if (checkBingo()) {
             // Jeśli tak, wyświetl napis "BINGO"
             displayBingo();
-
         }
     };
 
     private void generateRandomNumber() {
-        // Generuj losową liczbę
-        if (checkBingo()){
-            //logger.info("Bingo game won");
+        if (checkBingo() || attempts >= MAX_ATTEMPTS) {
             return;
         }
-        if(attempts>=MAX_ATTEMPTS){
-            showLoseScreen();
-        };
         ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
         Collections.shuffle(numbersList, random);
 
@@ -236,7 +209,6 @@ public class MultiplayerGameLogic extends Activity {
 
         // Jeśli nie znaleziono dostępnej liczby, obsłuż tę sytuację
         Log.e("generateRandomNumber", "No available number found after shuffling.");
-
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -246,13 +218,14 @@ public class MultiplayerGameLogic extends Activity {
             boolean isBingo = true;
             for (int j = 0; j < 5; j++) {
                 Button button = findViewById(buttonIds[i * 5 + j]);
-                if (button.getTag() == null || (int) button.getTag() == 0) {
+                int tag = button.getTag() == null ? 0 : (int) button.getTag(); // Poprawka: sprawdzenie tagu
+                if (tag == 0) {
                     isBingo = false;
                     break;
                 }
             }
             if (isBingo) {
-               setWinningPlayerWonStatus(gamePassword);
+                setWinningPlayerWonStatus(gamePassword);
                 return true;
             }
         }
@@ -262,7 +235,8 @@ public class MultiplayerGameLogic extends Activity {
             boolean isBingo = true;
             for (int j = 0; j < 5; j++) {
                 Button button = findViewById(buttonIds[j * 5 + i]);
-                if (button.getTag() == null || (int) button.getTag() == 0) {
+                int tag = button.getTag() == null ? 0 : (int) button.getTag(); // Poprawka: sprawdzenie tagu
+                if (tag == 0) {
                     isBingo = false;
                     break;
                 }
@@ -283,17 +257,9 @@ public class MultiplayerGameLogic extends Activity {
         playersRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
-                    boolean hasWon = playerSnapshot.child("won").getValue(Boolean.class);
-                    if (hasWon) {
-                        // Znaleziono zwycięskiego gracza
-                        String winningPlayerNickname = playerSnapshot.getKey();
-                        // Ustaw flagę "won" na true dla zwycięskiego gracza
-                        setPlayerWinStatus(gamePassword, winningPlayerNickname, true);
-                        // Możesz wykorzystać nick zwycięzcy w inny sposób w swojej grze
-                        // Na przykład wyświetl go na ekranie końcowym lub wyslij powiadomienie do pozostałych graczy
-                        return;
-                    }
+                String winningPlayerNickname = getPlayerNicknameForBingo(dataSnapshot);
+                if (!winningPlayerNickname.isEmpty()) {
+                    dataSnapshot.child(winningPlayerNickname).child("won").getRef().setValue(true);
                 }
             }
 
@@ -304,27 +270,19 @@ public class MultiplayerGameLogic extends Activity {
         });
     }
 
-
     private void setPlayerWinStatus(String gamePassword, String nickname, boolean hasWon) {
-        // Ustawienie statusu wygranej gracza w bazie danych
         firebaseManager.setPlayerWinStatus(gamePassword, nickname, hasWon, new OnCompleteListener<Void>() {
             @Override
             public void onComplete(@NonNull Task<Void> task) {
                 if (task.isSuccessful()) {
                     // Status wygranej gracza został pomyślnie zaktualizowany
-                    // Tutaj możesz umieścić kod do obsługi dalszych działań po aktualizacji statusu
                 } else {
                     // Wystąpił błąd podczas aktualizacji statusu wygranej gracza
-                    // Tutaj możesz obsłużyć błąd, np. poprzez wyświetlenie komunikatu użytkownikowi
                 }
             }
         });
     }
 
-    // Funkcja wyświetlająca ekran przegranego gracza
-
-
-    // Funkcja wyświetlająca ekran wygranego gracza
     private void displayBingo() {
         gameActive=false;
         for (int buttonId : buttonIds) {
@@ -347,13 +305,12 @@ public class MultiplayerGameLogic extends Activity {
             toolbarTitle.setVisibility(View.GONE);
             loseMessageTextView.setVisibility(View.VISIBLE);
             replayButton.setVisibility(View.VISIBLE);
-            Log.d("showLoseScreen",": Lose screen displayed");
+            Log.d("showLoseScreen", "Lose screen displayed"); // Poprawka: Wywołanie metody Log
         } catch (Exception e) {
-            Log.e("showLoseScreen: Exception caught: {}", e.getMessage());
+            Log.e("showLoseScreen", "Exception caught: " + e.getMessage()); // Poprawka: Wywołanie metody Log
         }
     }
 
-    // Usuń pokój gry z bazy danych po zakończeniu gry
     private void deleteGameRoom(String gamePassword) {
         gamesRef.child(gamePassword).removeValue()
                 .addOnCompleteListener(task -> {
@@ -365,7 +322,6 @@ public class MultiplayerGameLogic extends Activity {
                 });
     }
 
-    // Sprawdź, czy obaj gracze dołączyli do gry
     private void checkPlayersJoined(String gamePassword) {
         gamesRef.child(gamePassword).child("players").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -386,14 +342,16 @@ public class MultiplayerGameLogic extends Activity {
     private String getPlayerNicknameForBingo(DataSnapshot dataSnapshot) {
         String playerNickname = "";
         for (DataSnapshot playerSnapshot : dataSnapshot.getChildren()) {
-            // Tutaj pobieramy nick gracza, może to być np. nazwa węzła, jeśli nicki są przechowywane jako klucze
-            String nickname = playerSnapshot.getKey();
-            // Tutaj możesz przeprowadzić dodatkowe sprawdzenia, czy nick spełnia warunki, które potrzebujesz
-            playerNickname = nickname;
-            break; // Jeśli chcesz pobrać tylko pierwszego gracza, możesz przerwać pętlę
+            boolean hasWon = playerSnapshot.child("won").getValue(Boolean.class);
+            if (hasWon) {
+                // Gracz ten wygrał, zwróć jego nick
+                playerNickname = playerSnapshot.getKey();
+                break; // Jeśli chcesz pobrać tylko pierwszego gracza, możesz przerwać pętlę
+            }
         }
         return playerNickname;
     }
+
     private void listenForGameResults(String gamePassword) {
         gamesRef.child(gamePassword).child("players").addValueEventListener(new ValueEventListener() {
             @Override
@@ -402,9 +360,8 @@ public class MultiplayerGameLogic extends Activity {
                     String nickname = playerSnapshot.getKey();
                     boolean won = playerSnapshot.child("won").getValue(Boolean.class);
                     if (won) {
-                        // Gracz o nicku 'nickname' wygrał, pokaż ekran przegranego
-                        showLoseScreen();
-                        return; // Zakończ pętlę po znalezieniu jednego gracza, który wygrał
+                        showLoseScreen(); // Poprawka: wywołanie metody showLoseScreen()
+                        return;
                     }
                 }
             }
@@ -415,6 +372,4 @@ public class MultiplayerGameLogic extends Activity {
             }
         });
     }
-
-
 }
