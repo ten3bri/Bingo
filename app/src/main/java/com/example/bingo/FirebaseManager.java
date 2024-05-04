@@ -34,10 +34,26 @@ public class FirebaseManager {
         gamesRef = FirebaseDatabase.getInstance().getReference("games");
     }
 
-    public void joinGame(String gamePassword, String nickname, OnCompleteListener<Void> onCompleteListener) {
-        gamesRef.child(gamePassword).child("players").child(nickname).setValue(true)
-                .addOnCompleteListener(onCompleteListener);
+    public void joinGame(String gamePassword,String uid, String nickname, OnCompleteListener<Void> onCompleteListener) {
+        DatabaseReference playersRef = gamesRef.child(gamePassword).child("players");
+
+        // Ustaw początkowy status wygranej na "false" dla nowo dołączonego gracza
+        HashMap<String, Object> playerData = new HashMap<>();
+        playerData.put("won", false);
+
+        // Dodaj gracza do listy graczy w pokoju gry
+        playersRef.child(uid).setValue(playerData)
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        // Jeśli dodanie gracza zakończyło się sukcesem, zwróć sukces do metody wywołującej
+                        onCompleteListener.onComplete(task);
+                    } else {
+                        // W przypadku niepowodzenia dodania gracza, zwróć niepowodzenie do metody wywołującej
+                        onCompleteListener.onComplete(task);
+                    }
+                });
     }
+
 
     public void deleteGameRoom(String gamePassword, final OnCompleteListener<Boolean> onCompleteListener) {
         gamesRef.child(gamePassword).removeValue()
@@ -65,9 +81,10 @@ public class FirebaseManager {
 
         playersRef.addListenerForSingleValueEvent(listener);
     }
-    public void setPlayerWinStatus(String gamePassword, String nickname, boolean hasWon, OnCompleteListener<Void> onCompleteListener) {
+    public void setPlayerWinStatus(String gamePassword, String uid, boolean hasWon, OnCompleteListener<Void> onCompleteListener) {
         // Ustawienie statusu wygranej gracza w bazie danych
-        gamesRef.child(gamePassword).child("players").child(nickname).child("won").setValue(hasWon)
+        gamesRef.child(gamePassword).child("players").child(uid).child("won").setValue(hasWon)
                 .addOnCompleteListener(onCompleteListener);
     }
+
 }
