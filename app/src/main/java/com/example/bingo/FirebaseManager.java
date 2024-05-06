@@ -23,9 +23,6 @@ public class FirebaseManager {
     private DatabaseReference gamesRef;
     FirebaseDatabase database = FirebaseDatabase.getInstance();
 
-
-
-
     public FirebaseManager(Context context) {
         this.context = context;
         String databaseURL = database.getReference().toString();
