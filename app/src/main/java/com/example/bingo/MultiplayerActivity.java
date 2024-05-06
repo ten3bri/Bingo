@@ -42,6 +42,7 @@ public class MultiplayerActivity extends AppCompatActivity {
         firebaseManager = new FirebaseManager(this);
 
         buttonJoinGame.setOnClickListener(v -> {
+            buttonJoinGame.setEnabled(false);
             String gamePassword = editTextGamePassword.getText().toString().trim();
             if (!gamePassword.isEmpty()) {
                 String nickname = editTextNickname.getText().toString().trim();
@@ -148,6 +149,7 @@ public class MultiplayerActivity extends AppCompatActivity {
         new CountDownTimer(10000, 1000) {
             public void onTick(long millisUntilFinished) {
                 // Odliczanie
+                buttonJoinGame.setText("Starting in "+(millisUntilFinished/1000 )+" seconds");
             }
 
             public void onFinish() {

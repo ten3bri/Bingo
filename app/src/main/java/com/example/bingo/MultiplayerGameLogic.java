@@ -20,6 +20,8 @@ import java.util.Collections;
 import java.util.Random;
 import android.widget.Toast;
 import android.graphics.Color;
+import android.os.Handler;
+import android.content.Intent;
 
 import androidx.annotation.NonNull;
 import com.google.firebase.database.DatabaseError;
@@ -70,6 +72,12 @@ public class MultiplayerGameLogic extends Activity {
 
         gamesRef = FirebaseDatabase.getInstance().getReference("games");
 
+        // Odbierz hasło pokoju z poprzedniej aktywności
+        gamePassword = getIntent().getStringExtra("gamePassword");
+
+        // Sprawdź, czy obaj gracze dołączyli do gry
+        checkPlayersJoined(gamePassword);
+
         progressBar = findViewById(R.id.progress_bar);
         toolbarTitle = findViewById(R.id.toolbar_title);
         randomNumberTextView = findViewById(R.id.randomNumberTextView);
@@ -84,15 +92,15 @@ public class MultiplayerGameLogic extends Activity {
         bingoImage.setVisibility(View.GONE);
         replayButton.setVisibility(View.GONE);
 
-        // Odbierz hasło pokoju z poprzedniej aktywności
-        gamePassword = getIntent().getStringExtra("gamePassword");
 
-        // Sprawdź, czy obaj gracze dołączyli do gry
-        checkPlayersJoined(gamePassword);
+
+
     }
 
     private final View.OnClickListener replayButtonClickListener = v -> {
-        finish(); // Poprawka: zakończenie gry
+        Intent intent = new Intent(MultiplayerGameLogic.this, MultiplayerActivity.class);
+        startActivity(intent);
+        finish(); // Zakończenie bieżącej aktywności
     };
 
     private void startGame() {
@@ -191,8 +199,11 @@ public class MultiplayerGameLogic extends Activity {
     };
 
     private void generateRandomNumber() {
-        if (checkBingo() || attempts >= MAX_ATTEMPTS) {
+        if (checkBingo()) {
             return;
+        }
+        if(attempts>=MAX_ATTEMPTS){
+            showLoseScreen();
         }
         ArrayList<Integer> numbersList = new ArrayList<>(availableNumbers);
         Collections.shuffle(numbersList, random);
@@ -306,7 +317,8 @@ public class MultiplayerGameLogic extends Activity {
                             showLoseScreen();
                         }
                         else{
-                            displayBingo();
+                            //displayBingo();
+                            //Toast.makeText(this, "Wygrales jak cos", Toast.LENGTH_SHORT).show();
                         }
                     }
                 }
@@ -344,6 +356,7 @@ public class MultiplayerGameLogic extends Activity {
                     // Obaj gracze dołączyli do gry, zacznij grę
                     startGame();
                 }
+
             }
 
             @Override
